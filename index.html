@@ -109,14 +109,20 @@ L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19
 }).addTo(map);
 
+// ---------------- STATE ----------------
+let markers = [];
+
+// ---------------- MARKERS ----------------
 function addMarker(o) {
     const m = L.marker([o.lat, o.lng])
         .addTo(map)
         .bindPopup(`<b>${o.name}</b><br>${o.address}`);
 
     o.marker = m;
+    markers.push(m);
 }
 
+// ---------------- LIST ----------------
 function renderList(data) {
     const list = document.getElementById('officeList');
     list.innerHTML = '';
@@ -135,8 +141,10 @@ function renderList(data) {
     });
 }
 
+// ---------------- SEARCH ----------------
 function search(q) {
     q = q.toLowerCase().trim();
+
     if (!q) return postOffices;
 
     return postOffices.filter(o =>
@@ -145,36 +153,51 @@ function search(q) {
     );
 }
 
+// ---------------- CLEAR MAP ----------------
 function clearMap() {
-    map.eachLayer(l => {
-        if (l instanceof L.Marker) map.removeLayer(l);
-    });
+    markers.forEach(m => map.removeLayer(m));
+    markers = [];
 }
 
+// ---------------- INIT ----------------
 document.addEventListener('DOMContentLoaded', () => {
 
+    // initial load
     postOffices.forEach(addMarker);
     renderList(postOffices);
 
+    // search button
     document.getElementById('searchButton').onclick = () => {
-        const res = search(document.getElementById('searchInput').value);
+        const query = document.getElementById('searchInput').value;
+        const res = search(query);
 
         clearMap();
         res.forEach(addMarker);
         renderList(res);
 
-        if (res.length) {
-            const g = L.featureGroup(res.map(x => x.marker));
-            map.fitBounds(g.getBounds());
+        if (res.length > 0) {
+            const group = L.featureGroup(res.map(x => x.marker));
+            map.fitBounds(group.getBounds());
         }
     };
 
+    // ENTER key search
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            document.getElementById('searchButton').click();
+        }
+    });
+
+    // clear button
     document.getElementById('clearButton').onclick = () => {
         document.getElementById('searchInput').value = '';
 
         clearMap();
         postOffices.forEach(addMarker);
         renderList(postOffices);
+
+        const group = L.featureGroup(postOffices.map(x => x.marker));
+        map.fitBounds(group.getBounds());
     };
 
 });
