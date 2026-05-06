@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Washington DC Post Offices Map</title>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+<style>
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    flex-direction: column;
+    background: #f5f5f5;
+}
+
+.content-wrapper {
+    flex: 1;
+}
+
+.page-header {
+    background: #0056b3;
+    color: white;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+#map {
+    height: 500px;
+    border: 1px solid #ddd;
+}
+
+.office-list {
+    max-height: 500px;
+    overflow-y: auto;
+    background: white;
+    border: 1px solid #ddd;
+    padding: 10px;
+}
+
+.office-item {
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+}
+
+.office-item:hover {
+    background: #f0f0f0;
+}
+
+.page-footer {
+    padding: 20px;
+    background: #333;
+    color: white;
+    text-align: center;
+}
+</style>
+</head>
+
+<body>
+
+<header class="page-header">
+    <div class="container">
+        <h1>Washington DC Post Offices</h1>
+        <p>Interactive map using Leaflet.js</p>
+    </div>
+</header>
+
+<main class="content-wrapper">
+<div class="container">
+
+    <div class="input-group mb-3">
+        <input id="searchInput" class="form-control" placeholder="Search by name or address">
+        <button id="searchButton" class="btn btn-primary">Search</button>
+        <button id="clearButton" class="btn btn-secondary">Clear</button>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div id="map"></div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="office-list" id="officeList"></div>
+        </div>
+    </div>
+
+</div>
+</main>
+
+<footer class="page-footer">
+    Washington DC Post Offices Map © 2025
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="Post_Offices.js"></script>
+
+<script>
+const map = L.map('map').setView([38.9072, -77.0369], 13);
+
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+}).addTo(map);
+
+function addMarker(o) {
+    const m = L.marker([o.lat, o.lng])
+        .addTo(map)
+        .bindPopup(`<b>${o.name}</b><br>${o.address}`);
+
+    o.marker = m;
+}
+
+function renderList(data) {
+    const list = document.getElementById('officeList');
+    list.innerHTML = '';
+
+    data.forEach(o => {
+        const div = document.createElement('div');
+        div.className = 'office-item';
+        div.innerHTML = `<b>${o.name}</b><br>${o.address}`;
+
+        div.onclick = () => {
+            o.marker.openPopup();
+            map.setView([o.lat, o.lng], 15);
+        };
+
+        list.appendChild(div);
+    });
+}
+
+function search(q) {
+    q = q.toLowerCase().trim();
+    if (!q) return postOffices;
+
+    return postOffices.filter(o =>
+        o.name.toLowerCase().includes(q) ||
+        o.address.toLowerCase().includes(q)
+    );
+}
+
+function clearMap() {
+    map.eachLayer(l => {
+        if (l instanceof L.Marker) map.removeLayer(l);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+
+    postOffices.forEach(addMarker);
+    renderList(postOffices);
+
+    document.getElementById('searchButton').onclick = () => {
+        const res = search(document.getElementById('searchInput').value);
+
+        clearMap();
+        res.forEach(addMarker);
+        renderList(res);
+
+        if (res.length) {
+            const g = L.featureGroup(res.map(x => x.marker));
+            map.fitBounds(g.getBounds());
+        }
+    };
+
+    document.getElementById('clearButton').onclick = () => {
+        document.getElementById('searchInput').value = '';
+
+        clearMap();
+        postOffices.forEach(addMarker);
+        renderList(postOffices);
+    };
+
+});
+</script>
+
+</body>
+</html>
